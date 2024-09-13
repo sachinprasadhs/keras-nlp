@@ -81,7 +81,8 @@ def convert_weights(backbone, loader, timm_config):
             port_conv2d(f"{keras_name}_1_conv", f"{hf_name}.conv1")
             port_batch_normalization(f"{keras_name}_2_bn", f"{hf_name}.norm2")
             port_conv2d(f"{keras_name}_2_conv", f"{hf_name}.conv2")
-
+            
+    for stack_index in range(num_stacks-1):
         keras_transition_name = f"transition{stack_index+1}"
         hf_transition_name = f"features.transition{stack_index+1}"
         port_batch_normalization(f"{keras_transition_name}_bn", f"{hf_transition_name}.norm")

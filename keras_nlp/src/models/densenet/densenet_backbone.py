@@ -73,7 +73,7 @@ class DenseNetBackbone(FeaturePyramidBackbone):
 
         x = image_input
         if include_rescaling:
-            x = keras.layers.Rescaling(scale=1 / 255.0, dtype=dtype)(image_input)
+            x = keras.layers.Rescaling(scale=1 / 255.0)(image_input)
             x = keras.layers.Normalization(
                 axis=bn_axis,
                 mean=(0.485, 0.456, 0.406),

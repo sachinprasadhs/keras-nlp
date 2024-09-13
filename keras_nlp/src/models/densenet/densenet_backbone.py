@@ -73,8 +73,23 @@ class DenseNetBackbone(FeaturePyramidBackbone):
 
         x = image_input
         if include_rescaling:
-            x = keras.layers.Rescaling(1 / 255.0)(x)
+            x = layers.Rescaling(scale=1 / 255.0, dtype=dtype)(image_input)
+            x = layers.Normalization(
+                axis=bn_axis,
+                mean=(0.485, 0.456, 0.406),
+                variance=(0.229**2, 0.224**2, 0.225**2),
+                dtype=dtype,
+                name="normalization",
+            )(x)
 
+        # The padding between torch and tensorflow/jax differs when `strides>1`.
+        # Therefore, we need to manually pad the tensor.
+        x = layers.ZeroPadding2D(
+            (7 - 1) // 2,
+            data_format=data_format,
+            dtype=dtype,
+            name="conv1_pad",
+        )(x)
         x = keras.layers.Conv2D(
             64,
             7,
@@ -100,11 +115,11 @@ class DenseNetBackbone(FeaturePyramidBackbone):
                 channel_axis,
                 stackwise_num_repeats[stack_index],
                 growth_rate,
-                name=f"conv{index}",
+                name=f"stack{stack_index+1}",
             )
             pyramid_outputs[f"P{index}"] = x
             x = apply_transition_block(
-                x, channel_axis, compression_ratio, name=f"pool{index}"
+                x, channel_axis, compression_ratio, name=f"transition{stack_index+1}"
             )
 
         x = apply_dense_block(
@@ -112,7 +127,7 @@ class DenseNetBackbone(FeaturePyramidBackbone):
             channel_axis,
             stackwise_num_repeats[-1],
             growth_rate,
-            name=f"conv{len(stackwise_num_repeats) + 1}",
+            name=f"stack{len(stackwise_num_repeats)}",
         )
         pyramid_outputs[f"P{len(stackwise_num_repeats) +1}"] = x
         x = keras.layers.BatchNormalization(
@@ -158,7 +173,7 @@ def apply_dense_block(x, channel_axis, num_repeats, growth_rate, name=None):
 
     for i in range(num_repeats):
         x = apply_conv_block(
-            x, channel_axis, growth_rate, name=f"{name}_block_{i}"
+            x, channel_axis, growth_rate, name=f"{name}_block{i+1}"
         )
     return x
 
@@ -206,9 +221,9 @@ def apply_conv_block(x, channel_axis, growth_rate, name=None):
 
     shortcut = x
     x = keras.layers.BatchNormalization(
-        axis=channel_axis, epsilon=BN_EPSILON, name=f"{name}_0_bn"
+        axis=channel_axis, epsilon=BN_EPSILON, name=f"{name}_1_bn"
     )(x)
-    x = keras.layers.Activation("relu", name=f"{name}_0_relu")(x)
+    x = keras.layers.Activation("relu", name=f"{name}_1_relu")(x)
     x = keras.layers.Conv2D(
         4 * growth_rate,
         1,
@@ -217,9 +232,9 @@ def apply_conv_block(x, channel_axis, growth_rate, name=None):
         name=f"{name}_1_conv",
     )(x)
     x = keras.layers.BatchNormalization(
-        axis=channel_axis, epsilon=BN_EPSILON, name=f"{name}_1_bn"
+        axis=channel_axis, epsilon=BN_EPSILON, name=f"{name}_2_bn"
     )(x)
-    x = keras.layers.Activation("relu", name=f"{name}_1_relu")(x)
+    x = keras.layers.Activation("relu", name=f"{name}_2_relu")(x)
     x = keras.layers.Conv2D(
         growth_rate,
         3,

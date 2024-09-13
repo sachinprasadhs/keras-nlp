@@ -73,8 +73,8 @@ class DenseNetBackbone(FeaturePyramidBackbone):
 
         x = image_input
         if include_rescaling:
-            x = layers.Rescaling(scale=1 / 255.0, dtype=dtype)(image_input)
-            x = layers.Normalization(
+            x = keras.layers.Rescaling(scale=1 / 255.0, dtype=dtype)(image_input)
+            x = keras.layers.Normalization(
                 axis=bn_axis,
                 mean=(0.485, 0.456, 0.406),
                 variance=(0.229**2, 0.224**2, 0.225**2),
@@ -84,7 +84,7 @@ class DenseNetBackbone(FeaturePyramidBackbone):
 
         # The padding between torch and tensorflow/jax differs when `strides>1`.
         # Therefore, we need to manually pad the tensor.
-        x = layers.ZeroPadding2D(
+        x = keras.layers.ZeroPadding2D(
             (7 - 1) // 2,
             data_format=data_format,
             dtype=dtype,

@@ -78,7 +78,6 @@ class DenseNetBackbone(FeaturePyramidBackbone):
                 axis=bn_axis,
                 mean=(0.485, 0.456, 0.406),
                 variance=(0.229**2, 0.224**2, 0.225**2),
-                dtype=dtype,
                 name="normalization",
             )(x)
 
@@ -87,7 +86,6 @@ class DenseNetBackbone(FeaturePyramidBackbone):
         x = keras.layers.ZeroPadding2D(
             (7 - 1) // 2,
             data_format=data_format,
-            dtype=dtype,
             name="conv1_pad",
         )(x)
         x = keras.layers.Conv2D(
